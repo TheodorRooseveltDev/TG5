@@ -58,7 +58,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
           // Center FAB
           Positioned(
-            top: -28,
+            top: -8,
             left: MediaQuery.of(context).size.width / 2 - 28,
             child: GestureDetector(
               onTap: () => onTap(2),

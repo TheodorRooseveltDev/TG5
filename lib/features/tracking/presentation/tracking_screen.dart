@@ -100,6 +100,30 @@ class TrackingScreen extends ConsumerWidget {
 
               const SizedBox(height: 32),
 
+              // Start Run button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: PremiumButton(
+                  text: activeRun != null ? 'Resume Run' : 'Start Run',
+                  icon: Icons.play_arrow,
+                  onPressed: () {
+                    if (activeRun == null) {
+                      ref.read(activeRunProvider.notifier).startRun();
+                    }
+                    // Navigate to active run screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ActiveRunScreen(),
+                      ),
+                    );
+                  },
+                  width: double.infinity,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
               // Daily run log section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -163,30 +187,6 @@ class TrackingScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Start Run button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: PremiumButton(
-                  text: activeRun != null ? 'Resume Run' : 'Start Run',
-                  icon: Icons.play_arrow,
-                  onPressed: () {
-                    if (activeRun == null) {
-                      ref.read(activeRunProvider.notifier).startRun();
-                    }
-                    // Navigate to active run screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ActiveRunScreen(),
-                      ),
-                    );
-                  },
-                  width: double.infinity,
                 ),
               ),
 

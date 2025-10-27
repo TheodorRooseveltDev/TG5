@@ -215,7 +215,7 @@ class SettingsScreen extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => const WebViewScreen(
                                 title: 'Terms & Conditions',
-                                url: 'https://example.com/terms',
+                                url: 'https://www.termsfeed.com/live/0a200fd6-cd1a-477d-a954-fa824b989c75',
                               ),
                             ),
                           );
@@ -232,7 +232,7 @@ class SettingsScreen extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => const WebViewScreen(
                                 title: 'Privacy Policy',
-                                url: 'https://example.com/privacy',
+                                url: 'https://www.freeprivacypolicy.com/live/c001b736-0834-428b-a1bf-c566027cf032',
                               ),
                             ),
                           );
