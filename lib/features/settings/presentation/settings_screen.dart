@@ -26,7 +26,10 @@ class SettingsScreen extends ConsumerWidget {
               elevation: 0,
               pinned: true,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               title: const Text(
@@ -91,7 +94,11 @@ class SettingsScreen extends ConsumerWidget {
                             size: 20,
                           ),
                           onPressed: () {
-                            _showEditNameDialog(context, ref, userProfile?.name ?? '');
+                            _showEditNameDialog(
+                              context,
+                              ref,
+                              userProfile?.name ?? '',
+                            );
                           },
                         ),
                         const SizedBox(width: 8),
@@ -158,7 +165,9 @@ class SettingsScreen extends ConsumerWidget {
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Notifications settings coming soon'),
+                              content: Text(
+                                'Notifications settings coming soon',
+                              ),
                               backgroundColor: AppColors.neonGreen,
                             ),
                           );
@@ -215,7 +224,7 @@ class SettingsScreen extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => const WebViewScreen(
                                 title: 'Terms & Conditions',
-                                url: 'https://www.termsfeed.com/live/0a200fd6-cd1a-477d-a954-fa824b989c75',
+                                url: 'https://rabitruntrack.com/terms/',
                               ),
                             ),
                           );
@@ -232,7 +241,7 @@ class SettingsScreen extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => const WebViewScreen(
                                 title: 'Privacy Policy',
-                                url: 'https://www.freeprivacypolicy.com/live/c001b736-0834-428b-a1bf-c566027cf032',
+                                url: 'https://rabitruntrack.com/privacy/',
                               ),
                             ),
                           );
@@ -279,7 +288,10 @@ class SettingsScreen extends ConsumerWidget {
                               height: 64,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [AppColors.neonGreen, AppColors.cyanRing],
+                                  colors: [
+                                    AppColors.neonGreen,
+                                    AppColors.cyanRing,
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -306,13 +318,15 @@ class SettingsScreen extends ConsumerWidget {
                         subtitle: 'Support us with a review',
                         onTap: () async {
                           final InAppReview inAppReview = InAppReview.instance;
-                          
+
                           if (await inAppReview.isAvailable()) {
                             await inAppReview.requestReview();
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Rating not available at this time'),
+                                content: Text(
+                                  'Rating not available at this time',
+                                ),
                                 backgroundColor: AppColors.neonGreen,
                               ),
                             );
@@ -362,28 +376,37 @@ class SettingsScreen extends ConsumerWidget {
                               ),
                               content: const Text(
                                 'This will delete all your runs, selfies, marathon events, and reset your streak. This cannot be undone.',
-                                style: TextStyle(color: AppColors.textSecondary),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   child: const Text(
                                     'Cancel',
-                                    style: TextStyle(color: AppColors.textSecondary),
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ),
                                 TextButton(
                                   onPressed: () async {
                                     // Clear all data from SharedPreferences
-                                    final prefs = await SharedPreferences.getInstance();
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
                                     await prefs.clear();
-                                    
+
                                     Navigator.pop(context);
-                                    Navigator.pop(context); // Go back from settings
-                                    
+                                    Navigator.pop(
+                                      context,
+                                    ); // Go back from settings
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('All data cleared. Please restart the app.'),
+                                        content: Text(
+                                          'All data cleared. Please restart the app.',
+                                        ),
                                         backgroundColor: AppColors.orangeRing,
                                         duration: Duration(seconds: 3),
                                       ),
@@ -416,28 +439,37 @@ class SettingsScreen extends ConsumerWidget {
                               ),
                               content: const Text(
                                 'This action CANNOT be undone. All your running data, selfies, and achievements will be permanently deleted.',
-                                style: TextStyle(color: AppColors.textSecondary),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   child: const Text(
                                     'Cancel',
-                                    style: TextStyle(color: AppColors.textSecondary),
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ),
                                 TextButton(
                                   onPressed: () async {
                                     // Delete all data from SharedPreferences
-                                    final prefs = await SharedPreferences.getInstance();
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
                                     await prefs.clear();
-                                    
+
                                     Navigator.pop(context);
-                                    Navigator.pop(context); // Go back from settings
-                                    
+                                    Navigator.pop(
+                                      context,
+                                    ); // Go back from settings
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Account deleted. Please restart the app.'),
+                                        content: Text(
+                                          'Account deleted. Please restart the app.',
+                                        ),
                                         backgroundColor: Colors.red,
                                         duration: Duration(seconds: 3),
                                       ),
@@ -445,7 +477,10 @@ class SettingsScreen extends ConsumerWidget {
                                   },
                                   child: const Text(
                                     'Delete Forever',
-                                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -529,11 +564,7 @@ class _SettingsTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.textSecondary,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
           ],
         ),
       ),
@@ -542,9 +573,15 @@ class _SettingsTile extends StatelessWidget {
 }
 
 // Edit Name Dialog
-void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName) {
-  final TextEditingController controller = TextEditingController(text: currentName);
-  
+void _showEditNameDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String currentName,
+) {
+  final TextEditingController controller = TextEditingController(
+    text: currentName,
+  );
+
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
@@ -566,9 +603,7 @@ void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName
         ),
         decoration: InputDecoration(
           hintText: 'Your name',
-          hintStyle: const TextStyle(
-            color: AppColors.textSecondary,
-          ),
+          hintStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
           fillColor: AppColors.background,
           border: OutlineInputBorder(
@@ -577,10 +612,7 @@ void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: AppColors.neonGreen,
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: AppColors.neonGreen, width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -599,7 +631,7 @@ void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName
         TextButton(
           onPressed: () async {
             final newName = controller.text.trim();
-            
+
             if (newName.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -609,7 +641,7 @@ void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName
               );
               return;
             }
-            
+
             if (newName.length < 2) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -619,11 +651,11 @@ void _showEditNameDialog(BuildContext context, WidgetRef ref, String currentName
               );
               return;
             }
-            
+
             await ref.read(userProfileProvider.notifier).updateName(newName);
-            
+
             Navigator.pop(context);
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Name updated successfully'),
