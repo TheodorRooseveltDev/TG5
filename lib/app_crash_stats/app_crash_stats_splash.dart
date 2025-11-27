@@ -11,6 +11,6 @@ class AppCrashStatsSplash extends StatefulWidget {
 class _AppCrashStatsSplashState extends State<AppCrashStatsSplash> {
   @override
   Widget build(BuildContext context) {
-    return SplashLoadingScreen();
+    return const SplashLoadingScreen();
   }
 }
