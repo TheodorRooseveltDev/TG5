@@ -1,13 +1,10 @@
-import 'dart:ui';
-
-import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_consent_prompt.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_service.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_splash.dart';
+import 'app_crash_stats.dart';
+import 'app_crash_stats_parameters.dart';
+import 'app_crash_stats_service.dart';
+import 'app_crash_stats_splash.dart';
 
 class AppCrashStatsWebViewWidget extends StatefulWidget {
   const AppCrashStatsWebViewWidget({super.key});
@@ -19,23 +16,26 @@ class AppCrashStatsWebViewWidget extends StatefulWidget {
 
 class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
     with WidgetsBindingObserver {
-  late InAppWebViewController appCrashStatsWebViewController;
+  InAppWebViewController? appCrashStatsWebViewController;
 
   bool appCrashStatsShowLoading = true;
-  bool appCrashStatsShowConsentPrompt = false;
 
   bool appCrashStatsWasOpenNotification =
-      appCrashStatsSharedPreferences.getBool("wasOpenNotification") ?? false;
+      appCrashStatsSharedPreferences.getBool(
+            appCrashStatsWasOpenNotificationKey,
+          ) ??
+          false;
 
-  final bool savePermission =
-      appCrashStatsSharedPreferences.getBool("savePermission") ?? false;
-
-  bool waitingForSettingsReturn = false;
+  bool appCrashStatsSavePermission = appCrashStatsSharedPreferences.getBool(
+        appCrashStatsSavePermissionKey,
+      ) ??
+      false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    appCrashStatsSyncNotificationState();
   }
 
   @override
@@ -47,16 +47,19 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+  }
 
-    if (state == AppLifecycleState.resumed) {
-      if (waitingForSettingsReturn) {
-        waitingForSettingsReturn = false;
-        Future.delayed(const Duration(milliseconds: 450), () {
-          if (mounted) {
-            appCrashStatsAfterSetting();
-          }
-        });
-      }
+  Future<void> appCrashStatsSyncNotificationState() async {
+    final bool systemNotificationsEnabled =
+        await AppCrashStatsService().isSystemPermissionGranted();
+
+    appCrashStatsWasOpenNotification = systemNotificationsEnabled;
+    appCrashStatsSharedPreferences.setBool(
+      appCrashStatsWasOpenNotificationKey,
+      systemNotificationsEnabled,
+    );
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -64,17 +67,38 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
     final deviceState = OneSignal.User.pushSubscription;
 
     bool havePermission = deviceState.optedIn ?? false;
-    final bool systemNotificationsEnabled = await AppCrashStatsService()
-        .isSystemPermissionGranted();
+    final bool systemNotificationsEnabled =
+        await AppCrashStatsService().isSystemPermissionGranted();
 
     if (havePermission || systemNotificationsEnabled) {
-      appCrashStatsSharedPreferences.setBool("wasOpenNotification", true);
+      appCrashStatsSharedPreferences.setBool(
+          appCrashStatsWasOpenNotificationKey, true);
       appCrashStatsWasOpenNotification = true;
-      AppCrashStatsService().appCrashStatsSendRequiestToBack();
+      appCrashStatsSharedPreferences.setBool(appCrashStatsSavePermissionKey, false);
+      appCrashStatsSavePermission = false;
+      AppCrashStatsService().sendRequestToBackend();
     }
 
-    appCrashStatsShowConsentPrompt = false;
     setState(() {});
+  }
+
+  Future<void> appCrashStatsHandlePushPermissionFlow() async {
+    await AppCrashStatsService().requestPermissionOneSignal();
+
+    final bool systemNotificationsEnabled =
+        await AppCrashStatsService().isSystemPermissionGranted();
+
+    if (systemNotificationsEnabled) {
+      appCrashStatsSharedPreferences.setBool(
+          appCrashStatsWasOpenNotificationKey, true);
+      appCrashStatsWasOpenNotification = true;
+      appCrashStatsSharedPreferences.setBool(appCrashStatsSavePermissionKey, false);
+      appCrashStatsSavePermission = false;
+      AppCrashStatsService().sendRequestToBackend();
+    } else {
+      appCrashStatsSharedPreferences.setBool(appCrashStatsSavePermissionKey, true);
+      appCrashStatsSavePermission = true;
+    }
   }
 
   @override
@@ -91,66 +115,19 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
                 children: [
                   Expanded(
                     child: InAppWebView(
-                      onCreateWindow:
-                          (
-                            controller,
-                            CreateWindowAction createWindowRequest,
-                          ) async {
-                            await showDialog(
-                              context: context,
-                              builder: (dialogContext) {
-                                final dialogSize = MediaQuery.of(
-                                  dialogContext,
-                                ).size;
-
-                                return AlertDialog(
-                                  contentPadding: EdgeInsets.zero,
-                                  content: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      SizedBox(
-                                        width: dialogSize.width,
-                                        height: dialogSize.height * 0.8,
-                                        child: InAppWebView(
-                                          windowId:
-                                              createWindowRequest.windowId,
-                                          initialSettings: InAppWebViewSettings(
-                                            javaScriptEnabled: true,
-                                          ),
-                                          onCloseWindow: (controller) {
-                                            Navigator.of(dialogContext).pop();
-                                          },
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: -18,
-                                        right: -18,
-                                        child: Material(
-                                          color: Colors.black.withOpacity(0.7),
-                                          shape: const CircleBorder(),
-                                          child: InkWell(
-                                            customBorder: const CircleBorder(),
-                                            onTap: () {
-                                              Navigator.of(dialogContext).pop();
-                                            },
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: Icon(
-                                                Icons.close,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                            return true;
-                          },
+                      onCreateWindow: (controller,
+                          CreateWindowAction createWindowRequest) async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            fullscreenDialog: true,
+                            builder: (_) => _AppCrashStatsPopupWebView(
+                              windowId: createWindowRequest.windowId,
+                              initialRequest: createWindowRequest.request,
+                            ),
+                          ),
+                        );
+                        return true;
+                      },
                       initialUrlRequest: URLRequest(
                         url: WebUri(appCrashStatsLink!),
                       ),
@@ -161,6 +138,16 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
                         mediaPlaybackRequiresUserGesture: false,
                         supportMultipleWindows: true,
                         javaScriptCanOpenWindowsAutomatically: true,
+                        cacheEnabled: true,
+                        clearCache: false,
+                        cacheMode: CacheMode.LOAD_CACHE_ELSE_NETWORK,
+                        useOnLoadResource: false,
+                        useShouldInterceptAjaxRequest: false,
+                        useShouldInterceptFetchRequest: false,
+                        hardwareAcceleration: true,
+                        thirdPartyCookiesEnabled: true,
+                        sharedCookiesEnabled: true,
+                        disallowOverScroll: true,
                       ),
                       onWebViewCreated: (controller) {
                         appCrashStatsWebViewController = controller;
@@ -174,19 +161,21 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
                             await AppCrashStatsService()
                                 .isSystemPermissionGranted();
 
-                        await Future.delayed(Duration(milliseconds: 3000));
+                        await Future.delayed(const Duration(seconds: 3));
 
                         if (systemNotificationsEnabled) {
                           appCrashStatsSharedPreferences.setBool(
-                            "wasOpenNotification",
+                            appCrashStatsWasOpenNotificationKey,
                             true,
                           );
                           appCrashStatsWasOpenNotification = true;
+                          AppCrashStatsService().sendRequestToBackend();
+                          AppCrashStatsService().notifyOneSignalAccepted();
                         }
 
                         if (!systemNotificationsEnabled) {
-                          appCrashStatsShowConsentPrompt = true;
                           appCrashStatsWasOpenNotification = true;
+                          await appCrashStatsHandlePushPermissionFlow();
                         }
 
                         setState(() {});
@@ -204,55 +193,6 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
           ),
         ),
         if (appCrashStatsShowLoading) const AppCrashStatsSplash(),
-        if (!appCrashStatsShowLoading)
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 450),
-            reverseDuration: const Duration(milliseconds: 300),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: appCrashStatsShowConsentPrompt
-                ? AppCrashStatsConsentPromptPage(
-                    key: const ValueKey('consent_prompt'),
-                    onYes: () async {
-                      if (savePermission == true) {
-                        waitingForSettingsReturn = true;
-                        await AppSettings.openAppSettings(
-                          type: AppSettingsType.settings,
-                        );
-                      } else {
-                        await AppCrashStatsService()
-                            .appCrashStatsRequestPermissionOneSignal();
-
-                        final bool systemNotificationsEnabled =
-                            await AppCrashStatsService()
-                                .isSystemPermissionGranted();
-
-                        if (systemNotificationsEnabled) {
-                          appCrashStatsSharedPreferences.setBool(
-                            "wasOpenNotification",
-                            true,
-                          );
-                        } else {
-                          appCrashStatsSharedPreferences.setBool(
-                            "savePermission",
-                            true,
-                          );
-                        }
-                        appCrashStatsWasOpenNotification = true;
-                        appCrashStatsShowConsentPrompt = false;
-                        setState(() {});
-                      }
-                    },
-                    onNo: () {
-                      setState(() {
-                        appCrashStatsWasOpenNotification = true;
-                        appCrashStatsShowConsentPrompt = false;
-                      });
-                    },
-                  )
-                : const SizedBox.shrink(key: ValueKey('empty')),
-          ),
       ],
     );
   }
@@ -271,8 +211,9 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
             color: Colors.white,
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
-              if (await appCrashStatsWebViewController.canGoBack()) {
-                appCrashStatsWebViewController.goBack();
+              if (appCrashStatsWebViewController != null &&
+                  await appCrashStatsWebViewController!.canGoBack()) {
+                appCrashStatsWebViewController!.goBack();
               }
             },
           ),
@@ -282,12 +223,116 @@ class _AppCrashStatsWebViewWidgetState extends State<AppCrashStatsWebViewWidget>
             color: Colors.white,
             icon: const Icon(Icons.arrow_forward),
             onPressed: () async {
-              if (await appCrashStatsWebViewController.canGoForward()) {
-                appCrashStatsWebViewController.goForward();
+              if (appCrashStatsWebViewController != null &&
+                  await appCrashStatsWebViewController!.canGoForward()) {
+                appCrashStatsWebViewController!.goForward();
               }
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AppCrashStatsPopupWebView extends StatelessWidget {
+  const _AppCrashStatsPopupWebView({
+    required this.windowId,
+    required this.initialRequest,
+  });
+
+  final int? windowId;
+  final URLRequest? initialRequest;
+
+  @override
+  Widget build(BuildContext context) {
+    return _AppCrashStatsPopupWebViewBody(
+      windowId: windowId,
+      initialRequest: initialRequest,
+    );
+  }
+}
+
+class _AppCrashStatsPopupWebViewBody extends StatefulWidget {
+  const _AppCrashStatsPopupWebViewBody({
+    required this.windowId,
+    required this.initialRequest,
+  });
+
+  final int? windowId;
+  final URLRequest? initialRequest;
+
+  @override
+  State<_AppCrashStatsPopupWebViewBody> createState() =>
+      _AppCrashStatsPopupWebViewBodyState();
+}
+
+class _AppCrashStatsPopupWebViewBodyState
+    extends State<_AppCrashStatsPopupWebViewBody> {
+  InAppWebViewController? popupController;
+  double progress = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black.withOpacity(0.3),
+      appBar: AppBar(
+        backgroundColor: Colors.black.withOpacity(0.3),
+        foregroundColor: Colors.white,
+        toolbarHeight: 36,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        elevation: 0,
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            AnimatedOpacity(
+              opacity: progress < 1 ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: LinearProgressIndicator(
+                value: progress < 1 ? progress : null,
+                minHeight: 2,
+                backgroundColor: Colors.white12,
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Color(0xff007AFF)),
+              ),
+            ),
+            Expanded(
+              child: InAppWebView(
+                windowId: widget.windowId,
+                initialUrlRequest: widget.initialRequest,
+                initialSettings: InAppWebViewSettings(
+                  javaScriptEnabled: true,
+                  supportMultipleWindows: true,
+                  javaScriptCanOpenWindowsAutomatically: true,
+                  allowsInlineMediaPlayback: true,
+                ),
+                onWebViewCreated: (controller) {
+                  popupController = controller;
+                },
+                onProgressChanged: (controller, newProgress) {
+                  setState(() {
+                    progress = newProgress / 100;
+                  });
+                },
+                onLoadStop: (controller, uri) {
+                  setState(() {
+                    progress = 1;
+                  });
+                },
+                onCloseWindow: (controller) {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

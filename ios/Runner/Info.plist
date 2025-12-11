@@ -36,6 +36,8 @@
 	<string>We need your location to track your running route and distance accurately.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Microphone access is needed for camera functionality.</string>
+	<key>NSAdvertisingAttributionReportEndpoint</key>
+	<string>https://appsflyer-skadnetwork.com/</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

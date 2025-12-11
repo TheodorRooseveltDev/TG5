@@ -1,10 +1,10 @@
-import 'dart:async';
 import 'package:appsflyer_sdk/appsflyer_sdk.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_splash.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_service.dart';
-import 'package:rabit_run/app_crash_stats/app_crash_stats_parameters.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'app_crash_stats_parameters.dart';
+import 'app_crash_stats_service.dart';
+import 'app_crash_stats_splash.dart';
 
 late SharedPreferences appCrashStatsSharedPreferences;
 
@@ -16,7 +16,8 @@ String? appCrashStatsLink;
 String? appCrashStatsAppsflyerId;
 String? appCrashStatsExternalId;
 
-String? appCrashStatsPushConsentMsg;
+int appCrashStatsWebViewType = 1;
+bool appCrashStatsConversionHandled = false;
 
 class AppCrashStats extends StatefulWidget {
   const AppCrashStats({super.key});
@@ -32,88 +33,93 @@ class _AppCrashStatsState extends State<AppCrashStats> {
     appCrashStatsInitAll();
   }
 
-  appCrashStatsInitAll() async {
-    await Future.delayed(Duration(milliseconds: 10));
+  Future<void> appCrashStatsInitAll() async {
+    await Future.delayed(const Duration(milliseconds: 10));
     appCrashStatsSharedPreferences = await SharedPreferences.getInstance();
-    bool sendedAnalytics =
-        appCrashStatsSharedPreferences.getBool("sendedAnalytics") ?? false;
-    appCrashStatsLink = appCrashStatsSharedPreferences.getString("link");
+    final bool sentAnalytics =
+        appCrashStatsSharedPreferences.getBool(appCrashStatsSentFlagKey) ??
+            false;
+    appCrashStatsLink =
+        appCrashStatsSharedPreferences.getString(appCrashStatsLinkKey);
+    appCrashStatsWebViewType = appCrashStatsSharedPreferences
+            .getInt(appCrashStatsWebViewTypeKey) ??
+        1;
 
-    appCrashStatsPushConsentMsg = appCrashStatsSharedPreferences.getString(
-      "pushconsentmsg",
-    );
+    if (appCrashStatsLink != null && appCrashStatsLink!.isNotEmpty) {
+      appCrashStatsWebViewType =
+          appCrashStatsDetectWebViewType(appCrashStatsLink!);
+      appCrashStatsSharedPreferences.setInt(
+        appCrashStatsWebViewTypeKey,
+        appCrashStatsWebViewType,
+      );
+    }
 
     if (appCrashStatsLink != null &&
-        appCrashStatsLink != "" &&
-        !sendedAnalytics) {
-      AppCrashStatsService().appCrashStatsNavigateToWebView(context);
+        appCrashStatsLink!.isNotEmpty &&
+        !sentAnalytics) {
+      AppCrashStatsService().navigateToWebView(context);
+    } else if (sentAnalytics) {
+      await AppCrashStatsService().navigateToStandardApp(context);
     } else {
-      if (sendedAnalytics) {
-        AppCrashStatsService().appCrashStatsNavigateToSplash(context);
-      } else {
-        appCrashStatsInitializeMainPart();
-      }
+      await appCrashStatsInitializeMainPart();
     }
   }
 
-  void appCrashStatsInitializeMainPart() async {
-    await AppCrashStatsService().appCrashStatsRequestTrackingPermission();
-    await AppCrashStatsService().appCrashStatsInitializeOneSignal();
+  Future<void> appCrashStatsInitializeMainPart() async {
+    final attRequest = AppCrashStatsService().requestTrackingPermission();
+    final oneSignalInit = AppCrashStatsService().initializeOneSignal();
+
+    await attRequest;
     await appCrashStatsTakeParams();
+    await oneSignalInit;
   }
 
-  String? appCrashStatsGetPushConsentMsgValue(String link) {
+  int appCrashStatsDetectWebViewType(String link) {
     try {
       final uri = Uri.parse(link);
       final params = uri.queryParameters;
-
-      return params['pushconsentmsg'];
-    } catch (e) {
-      return null;
+      return int.tryParse(params['wtype'] ?? '') ?? 1;
+    } catch (_) {
+      return 1;
     }
   }
 
   Future<void> appCrashStatsCreateLink() async {
-    Map<dynamic, dynamic> parameters = appCrashStatsConversionData;
+    final Map<dynamic, dynamic> parameters = appCrashStatsConversionData;
 
     parameters.addAll({
       "tracking_status": appCrashStatsTrackingPermissionStatus,
-      "${appCrashStatsStandartWord}_id": appCrashStatsAdvertisingId,
+      "${appCrashStatsKeyword}_id": appCrashStatsAdvertisingId,
       "external_id": appCrashStatsExternalId,
       "appsflyer_id": appCrashStatsAppsflyerId,
     });
 
-    String? link = await AppCrashStatsService().sendAppCrashStatsRequest(
-      parameters,
-    );
+    final String? link =
+        await AppCrashStatsService().sendAppCrashStatsRequest(parameters);
 
     appCrashStatsLink = link;
 
-    if (appCrashStatsLink == "" || appCrashStatsLink == null) {
-      AppCrashStatsService().appCrashStatsNavigateToSplash(context);
+    if (appCrashStatsLink == null || appCrashStatsLink!.isEmpty) {
+      await AppCrashStatsService().navigateToStandardApp(context);
     } else {
-      appCrashStatsPushConsentMsg = appCrashStatsGetPushConsentMsgValue(
+      appCrashStatsWebViewType =
+          appCrashStatsDetectWebViewType(appCrashStatsLink!);
+      appCrashStatsSharedPreferences.setInt(
+        appCrashStatsWebViewTypeKey,
+        appCrashStatsWebViewType,
+      );
+      appCrashStatsSharedPreferences.setString(
+        appCrashStatsLinkKey,
         appCrashStatsLink!,
       );
-      if (appCrashStatsPushConsentMsg != null) {
-        appCrashStatsSharedPreferences.setString(
-          "pushconsentmsg",
-          appCrashStatsPushConsentMsg!,
-        );
-      }
-      appCrashStatsSharedPreferences.setString(
-        "link",
-        appCrashStatsLink.toString(),
-      );
-      appCrashStatsSharedPreferences.setBool("success", true);
-      AppCrashStatsService().appCrashStatsNavigateToWebView(context);
+      appCrashStatsSharedPreferences.setBool(appCrashStatsSuccessKey, true);
+      AppCrashStatsService().navigateToWebView(context);
     }
   }
 
   Future<void> appCrashStatsTakeParams() async {
-    final appsFlyerOptions = AppCrashStatsService()
-        .appCrashStatsCreateAppsFlyerOptions();
-    AppsflyerSdk appsFlyerSdk = AppsflyerSdk(appsFlyerOptions);
+    final appsFlyerOptions = AppCrashStatsService().createAppsFlyerOptions();
+    final AppsflyerSdk appsFlyerSdk = AppsflyerSdk(appsFlyerOptions);
 
     await appsFlyerSdk.initSdk(
       registerConversionDataCallback: true,
@@ -123,13 +129,17 @@ class _AppCrashStatsState extends State<AppCrashStats> {
     appCrashStatsAppsflyerId = await appsFlyerSdk.getAppsFlyerUID();
 
     appsFlyerSdk.onInstallConversionData((res) async {
+      if (appCrashStatsConversionHandled) {
+        return;
+      }
+      appCrashStatsConversionHandled = true;
       appCrashStatsConversionData = res;
       await appCrashStatsCreateLink();
     });
 
     appsFlyerSdk.startSDK(
       onError: (errorCode, errorMessage) {
-        AppCrashStatsService().appCrashStatsNavigateToSplash(context);
+        AppCrashStatsService().navigateToStandardApp(context);
       },
     );
   }

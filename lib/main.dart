@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rabit_run/app_crash_stats/app_crash_stats.dart';
+import 'package:rabit_run/app_crash_stats/app_crash_stats_parameters.dart';
 import 'core/theme/app_theme.dart';
 import 'features/navigation/main_navigation_screen.dart';
 import 'features/onboarding/presentation/onboarding_screen.dart';
@@ -28,6 +29,7 @@ class RabbitRunTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    appCrashStatsRegisterStandardApp((context) => const AppInitializer());
     return MaterialApp(
       title: 'Rabbit RunTracker',
       debugShowCheckedModeBanner: false,
